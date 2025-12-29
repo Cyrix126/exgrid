@@ -77,30 +77,26 @@ impl<'a, 'b> ExUi<'a, 'b> {
             ref mut ui_columns,
         } = self.state.mode
         {
-            if let Some(ref mut col) = ui_columns {
-                return col;
+            if let Some(col) = ui_columns {
+                col
             } else {
-                return &mut ui_row.last_mut().unwrap().content_ui;
+                &mut ui_row.last_mut().unwrap().content_ui
             }
         } else {
-            return self.ui.as_mut();
+            self.ui.as_mut()
         }
     }
     fn advance_temp_rect(&mut self) {
         if self.collapsed() || self.keep_cell.is_some() {
             return;
         }
-        let temp_rect = self
-            .temp_ui
-            .as_ref()
-            .map(|ui| {
-                if ui.is_visible() {
-                    Some(ui.min_rect())
-                } else {
-                    None
-                }
-            })
-            .flatten();
+        let temp_rect = self.temp_ui.as_ref().and_then(|ui| {
+            if ui.is_visible() {
+                Some(ui.min_rect())
+            } else {
+                None
+            }
+        });
         if let Some(rect) = temp_rect {
             self._ui().advance_cursor_after_rect(rect);
         }
@@ -116,9 +112,9 @@ fn disable_ui<'a: 'd, 'b: 'd, 'c: 'd, 'd>(
         let mut ui = simpleui(ui);
         ui.disable();
         *temp_ui = Some(MaybeOwnedMut::Owned(ui));
-        return temp_ui.as_mut().unwrap();
+        temp_ui.as_mut().unwrap()
     } else {
-        return ui;
+        ui
     }
 }
 impl<'a, 'b> DerefMut for ExUi<'a, 'b> {
@@ -166,17 +162,12 @@ impl<'a, 'b> DerefMut for ExUi<'a, 'b> {
                 ..
             } = self.state.as_mut();
 
-            if let ExUiMode::Compact {
-                ref mut ui_row,
-                ref mut ui_columns,
-            } = mode
-            {
+            if let ExUiMode::Compact { ui_row, ui_columns } = mode {
                 match column {
                     1 => {
                         let mut ui = simpleui(ui_row.last_mut().unwrap().ui());
                         if *collapsing_header {
-                            let collapsed =
-                                self.ui.data_mut(|d| d.get_temp_mut_or(id, false).clone());
+                            let collapsed = self.ui.data_mut(|d| *d.get_temp_mut_or(id, false));
                             let icon = if collapsed { "⏵" } else { "⏷" };
                             if ui.add(Button::new(icon).frame(false).small()).clicked() {
                                 self.ui.data_mut(|d| d.insert_temp(id, !collapsed));
@@ -186,7 +177,7 @@ impl<'a, 'b> DerefMut for ExUi<'a, 'b> {
                             ui.disable();
                         }
                         self.temp_ui = Some(MaybeOwnedMut::Owned(ui));
-                        return self.temp_ui.as_mut().unwrap();
+                        self.temp_ui.as_mut().unwrap()
                     }
                     2 => {
                         let ui = &mut ui_row.last_mut().unwrap().ui();
@@ -205,63 +196,57 @@ impl<'a, 'b> DerefMut for ExUi<'a, 'b> {
                             }));
                         }
 
-                        return disable_ui(
-                            &mut self.temp_ui,
-                            ui_columns.as_mut().unwrap(),
-                            *disabled,
-                        );
+                        disable_ui(&mut self.temp_ui, ui_columns.as_mut().unwrap(), *disabled)
                     }
                     _ => {
-                        if let Some(ref mut col) = ui_columns {
+                        if let Some(col) = ui_columns {
                             col.separator();
-                            return disable_ui(&mut self.temp_ui, col, *disabled);
+                            disable_ui(&mut self.temp_ui, col, *disabled)
                         } else {
                             unreachable!()
                         }
                     }
                 }
-            } else {
-                if *collapsing_header && *column == 1 {
+            } else if *collapsing_header && *column == 1 {
+                let mut ui = simpleui(self.ui.as_mut());
+                for _ in 0..row_cursor.len() - 2 {
+                    ui.separator();
+                }
+                let collapsed = ui.data_mut(|d| *d.get_temp_mut_or(id, false));
+                let icon = if collapsed { "⏵" } else { "⏷" };
+                if ui.add(Button::new(icon).frame(false).small()).clicked() {
+                    ui.data_mut(|d| d.insert_temp(id, !collapsed));
+                }
+                if *disabled != 0 {
+                    ui.disable();
+                }
+                self.temp_ui = Some(MaybeOwnedMut::Owned(ui));
+                self.temp_ui.as_mut().unwrap()
+            } else if row_cursor.len() > 1 {
+                //if rows are collapsed, we should not reach here(reaching here should be stopped by `collapsing_rows_body`)
+                if *column == 1 {
                     let mut ui = simpleui(self.ui.as_mut());
-                    for _ in 0..row_cursor.len() - 2 {
+                    for _ in 0..row_cursor.len() - 1 {
                         ui.separator();
-                    }
-                    let collapsed = ui.data_mut(|d| d.get_temp_mut_or(id, false).clone());
-                    let icon = if collapsed { "⏵" } else { "⏷" };
-                    if ui.add(Button::new(icon).frame(false).small()).clicked() {
-                        ui.data_mut(|d| d.insert_temp(id, !collapsed));
                     }
                     if *disabled != 0 {
                         ui.disable();
                     }
                     self.temp_ui = Some(MaybeOwnedMut::Owned(ui));
-                    return self.temp_ui.as_mut().unwrap();
-                } else if row_cursor.len() > 1 {
-                    //if rows are collapsed, we should not reach here(reaching here should be stopped by `collapsing_rows_body`)
-                    if *column == 1 {
-                        let mut ui = simpleui(self.ui.as_mut());
-                        for _ in 0..row_cursor.len() - 1 {
-                            ui.separator();
-                        }
-                        if *disabled != 0 {
-                            ui.disable();
-                        }
-                        self.temp_ui = Some(MaybeOwnedMut::Owned(ui));
-                        return self.temp_ui.as_mut().unwrap();
-                    } else {
-                        return disable_ui(&mut self.temp_ui, self.ui.as_mut(), *disabled);
-                    }
+                    self.temp_ui.as_mut().unwrap()
                 } else {
-                    return disable_ui(&mut self.temp_ui, self.ui.as_mut(), *disabled);
+                    disable_ui(&mut self.temp_ui, self.ui.as_mut(), *disabled)
                 }
-            };
+            } else {
+                disable_ui(&mut self.temp_ui, self.ui.as_mut(), *disabled)
+            }
         }
     }
 }
 impl<'a, 'b> From<&'a mut Ui> for ExUi<'a, 'b> {
     fn from(ui: &'a mut Ui) -> Self {
         let mut inner: ExUiInner = Default::default();
-        inner.width_max_prev = ui.data_mut(|d| d.get_temp_mut_or(ui.id(), 0.0).clone());
+        inner.width_max_prev = ui.data_mut(|d| *d.get_temp_mut_or(ui.id(), 0.0));
         ExUi {
             ui: MaybeOwnedMut::Borrowed(ui),
             state: MaybeOwnedMut::Owned(inner),
@@ -278,8 +263,9 @@ impl<'a, 'b> ExUi<'a, 'b> {
         if let ExUiMode::Compact {
             ref mut ui_columns, ..
         } = self.state.mode
+            && let Some(x) = ui_columns.as_mut()
         {
-            ui_columns.as_mut().map(|x| x.end_row());
+            x.end_row()
         }
     }
 
@@ -301,7 +287,7 @@ impl<'a, 'b> ExUi<'a, 'b> {
             if !self.collapsed() {
                 self.state
                     .collapsed
-                    .push(self.ui.data_mut(|d| d.get_temp_mut_or(id, false).clone()));
+                    .push(self.ui.data_mut(|d| *d.get_temp_mut_or(id, false)));
             }
         }
         if self.state.column != 0 {
@@ -499,13 +485,13 @@ impl<'a, 'b> ExUi<'a, 'b> {
     }
     /// If Ui has been disabled with `Self::start_disabled`, reenable it
     pub fn stop_disabled(&mut self) {
-        self.state.disabled.overflowing_sub(1).0;
+        self.state.disabled.overflowing_sub(1);
     }
 }
 #[allow(nonstandard_style)]
 static __egui_struct_mut_prior_add__: Lazy<
     Mutex<std::collections::HashMap<Id, Box<dyn Any + Send>>>,
-> = Lazy::new(|| Default::default());
+> = Lazy::new(Default::default);
 
 impl<'a, 'b> ExUi<'a, 'b> {
     /// Insert a value that will not be persisted. (Similar function to `egui::UI::data_mut`, but less strict bounds)
@@ -519,8 +505,7 @@ impl<'a, 'b> ExUi<'a, 'b> {
         __egui_struct_mut_prior_add__
             .lock()
             .remove(&id)
-            .map(|x| x.downcast().ok())
-            .flatten()
+            .and_then(|x| x.downcast().ok())
     }
 }
 
@@ -547,7 +532,7 @@ impl<'a, 'b, 'c> CollapsingRows<'a, 'b, 'c> {
         let id = self.exui.id();
         self.exui
             .ui
-            .data_mut(|d| d.get_temp_mut_or_insert_with(id, start_collapsed).clone());
+            .data_mut(|d| *d.get_temp_mut_or_insert_with(id, start_collapsed));
 
         self
     }
@@ -557,10 +542,7 @@ impl<'a, 'b, 'c> CollapsingRows<'a, 'b, 'c> {
         collapsing_rows: impl FnOnce(&mut ExUi) -> Response,
     ) -> CollapsingResponse<()> {
         let id = self.exui.id();
-        let collapsed = self
-            .exui
-            .ui
-            .data_mut(|d| d.get_temp_mut_or(id, false).clone());
+        let collapsed = self.exui.ui.data_mut(|d| *d.get_temp_mut_or(id, false));
         let mut ret = CollapsingResponse {
             header_response: self.header_response.clone(),
             body_response: None,

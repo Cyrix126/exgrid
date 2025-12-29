@@ -1,9 +1,9 @@
 [package]
 name = "exgrid"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["PingPongun <pp.pp4@vp.pl>"]
 description = "ExGrid is drop-in replacement to egui::Grid with several upgrades"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 exclude = ["demo/*", ".vscode/*"]
 repository = "https://github.com/PingPongun/exgrid/"

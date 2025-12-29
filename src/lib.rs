@@ -225,15 +225,15 @@ impl FrameRun {
     fn paint_rect(&self) -> Rect {
         let mut rect = self.content_ui.min_rect();
         rect.max.x = rect.max.x.max(self.parent_width);
-        let ret = rect + self.frame.inner_margin;
-        ret
+        
+        rect + self.frame.inner_margin
     }
 
     fn content_with_margin(&self) -> Rect {
         let margin = self.frame.total_margin() + MarginF32::same(self.frame.stroke.width);
 
-        let ret = self.content_ui.min_rect() + margin;
-        ret
+        
+        self.content_ui.min_rect() + margin
     }
 
     pub fn end(&mut self, max_x: f32, advance_before: Rect) {

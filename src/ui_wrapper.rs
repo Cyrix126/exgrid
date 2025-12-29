@@ -35,7 +35,7 @@ impl<'a, 'b: 'a> ExUi<'a, 'b> {
 
     /// Create a new [`ExUi`]
     pub fn simple_child(&mut self) -> Self {
-        self.child_ui(self.available_rect_before_wrap(), self.layout().clone())
+        self.child_ui(self.available_rect_before_wrap(), *self.layout())
     }
 
     /// Create a new [`ExUi`] at a specific region with a specific id.
