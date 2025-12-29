@@ -1,4 +1,5 @@
 use egui::mutex::Mutex;
+use egui::util::IdTypeMap;
 use maybe_owned::MaybeOwnedMut;
 use once_cell::sync::Lazy;
 use std::any::Any;
@@ -10,7 +11,7 @@ use crate::*;
 pub(crate) enum ExUiMode {
     Compact {
         ui_row: Vec<FrameRun>,
-        ui_columns: Option<Ui>,
+        ui_columns: Option<Box<Ui>>,
     },
 
     Grid {},
@@ -186,17 +187,18 @@ impl<'a, 'b> DerefMut for ExUi<'a, 'b> {
                         child_rect.min.x += indent;
 
                         {
-                            *ui_columns = Some(ui.new_child(UiBuilder {
+                            *ui_columns = Some(Box::new(ui.new_child(UiBuilder {
                                 id_salt: Some("indent".into()),
                                 max_rect: Some(child_rect),
                                 layout: Some(
                                     Layout::left_to_right(Align::TOP).with_main_wrap(true),
                                 ),
                                 ..Default::default()
-                            }));
+                            })));
                         }
 
-                        disable_ui(&mut self.temp_ui, ui_columns.as_mut().unwrap(), *disabled)
+                        let col = ui_columns.as_mut().unwrap();
+                        disable_ui(&mut self.temp_ui, col, *disabled)
                     }
                     _ => {
                         if let Some(col) = ui_columns {
@@ -245,8 +247,10 @@ impl<'a, 'b> DerefMut for ExUi<'a, 'b> {
 }
 impl<'a, 'b> From<&'a mut Ui> for ExUi<'a, 'b> {
     fn from(ui: &'a mut Ui) -> Self {
-        let mut inner: ExUiInner = Default::default();
-        inner.width_max_prev = ui.data_mut(|d| *d.get_temp_mut_or(ui.id(), 0.0));
+        let inner = ExUiInner {
+            width_max_prev: ui.data_mut(|d: &mut IdTypeMap| *d.get_temp_mut_or(ui.id(), 0.0)),
+            ..Default::default()
+        };
         ExUi {
             ui: MaybeOwnedMut::Borrowed(ui),
             state: MaybeOwnedMut::Owned(inner),
@@ -485,7 +489,7 @@ impl<'a, 'b> ExUi<'a, 'b> {
     }
     /// If Ui has been disabled with `Self::start_disabled`, reenable it
     pub fn stop_disabled(&mut self) {
-        self.state.disabled.overflowing_sub(1);
+        let _ = self.state.disabled.overflowing_sub(1);
     }
 }
 #[allow(nonstandard_style)]
