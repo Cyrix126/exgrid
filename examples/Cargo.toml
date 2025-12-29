@@ -6,8 +6,8 @@ license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
-eframe = { version = "0.28" }
-egui = { version = "0.28" }
+eframe = { version = "0.33" }
+egui = { version = "0.33" }
 exgrid = { path = ".." }
 
 [[bin]]

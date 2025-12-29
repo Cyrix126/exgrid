@@ -12,27 +12,15 @@ impl<'a, 'b: 'a> ExUi<'a, 'b> {
     /// Normally you would not use this directly, but instead use
     /// [`ExGrid::show`].
     #[inline]
-    pub fn new(ctx: Context, layer_id: LayerId, id: Id, max_rect: Rect, _clip_rect: Rect) -> Self {
+    pub fn new(ctx: Context, _layer_id: LayerId, id: Id, max_rect: Rect, _clip_rect: Rect) -> Self {
         ExUi {
-            #[cfg(feature = "egui29")]
             ui: MaybeOwnedMut::Owned(Ui::new(
                 ctx,
-                layer_id,
                 id,
                 UiBuilder {
                     max_rect: Some(max_rect),
                     ..Default::default()
                 },
-            )),
-            #[cfg(not(feature = "egui29"))]
-            ui: MaybeOwnedMut::Owned(Ui::new(
-                ctx,
-                layer_id,
-                id,
-                max_rect,
-                _clip_rect,
-                #[cfg(feature = "egui28")]
-                Default::default(),
             )),
             state: Default::default(),
             keep_cell: None,
@@ -59,21 +47,12 @@ impl<'a, 'b: 'a> ExUi<'a, 'b> {
         id_source: impl Hash,
     ) -> Self {
         ExUi {
-            #[cfg(feature = "egui29")]
             ui: MaybeOwnedMut::Owned(self.ui.new_child(UiBuilder {
                 id_salt: Some(Id::new(id_source)),
                 max_rect: Some(max_rect),
                 layout: Some(layout),
                 ..Default::default()
             })),
-            #[cfg(not(feature = "egui29"))]
-            ui: MaybeOwnedMut::Owned(self.ui.child_ui_with_id_source(
-                max_rect,
-                layout,
-                id_source,
-                #[cfg(feature = "egui28")]
-                None,
-            )),
             state: Default::default(),
             keep_cell: None,
             temp_ui: None,

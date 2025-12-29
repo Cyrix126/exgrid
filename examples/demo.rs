@@ -12,10 +12,7 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "ExGrid example",
         options,
-        #[cfg(any(feature = "egui28", feature = "egui29"))]
         Box::new(|_creation_context| Ok(Box::<DemoApp>::default())),
-        #[cfg(not(any(feature = "egui28", feature = "egui29")))]
-        Box::new(|_creation_context| Box::<DemoApp>::default()),
     )
 }
 

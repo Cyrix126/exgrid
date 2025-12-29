@@ -1,19 +1,6 @@
 #![forbid(unsafe_code)]
-#[cfg(feature = "egui23")]
-use egui23 as egui;
-#[cfg(feature = "egui24")]
-use egui24 as egui;
-#[cfg(feature = "egui25")]
-use egui25 as egui;
-#[cfg(feature = "egui26")]
-use egui26 as egui;
-#[cfg(feature = "egui27")]
-use egui27 as egui;
-#[cfg(feature = "egui28")]
-use egui28 as egui;
-#[cfg(feature = "egui29")]
-use egui29 as egui;
 
+use egui::epaint::MarginF32;
 use egui::layers::ShapeIdx;
 use egui::*;
 
@@ -213,32 +200,17 @@ impl FrameRun {
         let where_to_put_background = ui.painter().add(Shape::Noop);
         let outer_rect_bounds = ui.available_rect_before_wrap();
 
-        #[cfg(any(feature = "egui28", feature = "egui29"))]
         let mut inner_rect = outer_rect_bounds - (frame.inner_margin + frame.outer_margin);
-        #[cfg(not(any(feature = "egui28", feature = "egui29")))]
-        let mut inner_rect =
-            (frame.inner_margin + frame.outer_margin).shrink_rect(outer_rect_bounds);
-        if indent > 1 {
-            inner_rect.min.x += ui.style().spacing.indent;
-        }
 
         // Make sure we don't shrink to the negative:
         inner_rect.max.x = inner_rect.max.x.max(inner_rect.min.x);
         inner_rect.max.y = inner_rect.max.y.max(inner_rect.min.y);
 
-        #[cfg(feature = "egui29")]
         let content_ui = ui.new_child(UiBuilder {
             max_rect: Some(inner_rect),
             layout: Some(Layout::top_down_justified(Align::LEFT)),
             ..Default::default()
         });
-        #[cfg(not(feature = "egui29"))]
-        let content_ui = ui.child_ui(
-            inner_rect,
-            Layout::top_down_justified(Align::LEFT),
-            #[cfg(feature = "egui28")]
-            None,
-        );
 
         FrameRun {
             empty: true,
@@ -253,20 +225,14 @@ impl FrameRun {
     fn paint_rect(&self) -> Rect {
         let mut rect = self.content_ui.min_rect();
         rect.max.x = rect.max.x.max(self.parent_width);
-        #[cfg(any(feature = "egui28", feature = "egui29"))]
         let ret = rect + self.frame.inner_margin;
-        #[cfg(not(any(feature = "egui28", feature = "egui29")))]
-        let ret = self.frame.inner_margin.expand_rect(rect);
         ret
     }
 
     fn content_with_margin(&self) -> Rect {
-        let margin = self.frame.total_margin() + egui::Margin::same(self.frame.stroke.width);
+        let margin = self.frame.total_margin() + MarginF32::same(self.frame.stroke.width);
 
-        #[cfg(any(feature = "egui28", feature = "egui29"))]
         let ret = self.content_ui.min_rect() + margin;
-        #[cfg(not(any(feature = "egui28", feature = "egui29")))]
-        let ret = margin.expand_rect(self.content_ui.min_rect());
         ret
     }
 
